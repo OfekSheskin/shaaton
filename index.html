@@ -307,6 +307,25 @@ select.pill,input.pill{
   font-size:10.5px; color:var(--ink-3); background:var(--panel);
   padding:0 6px; border-radius:5px; white-space:nowrap; font-weight:600;
 }
+.breaks-layer{position:relative; pointer-events:none; z-index:4}
+.brk{
+  position:absolute; inset-inline:0;
+  background:repeating-linear-gradient(135deg,
+    transparent 0 5px,
+    color-mix(in srgb, var(--ink) 7%, transparent) 5px 10px);
+  border-block:1px dashed var(--line-2);
+  display:flex; align-items:center; justify-content:center;
+}
+.brk span{
+  font-size:10.5px; font-weight:700; letter-spacing:.03em; color:var(--ink-2);
+  background:var(--panel); padding:1px 9px; border-radius:6px;
+  border:1px solid var(--line); white-space:nowrap;
+}
+.brk span .t{font-family:"IBM Plex Mono",monospace; direction:ltr; unicode-bidi:isolate; opacity:.7; margin-inline-start:5px}
+.brkrow{display:grid; grid-template-columns:1fr auto 1fr auto; gap:5px; align-items:center; margin-bottom:5px}
+.brkrow input{padding:5px 6px!important; font-size:12.5px}
+.brkrow > span{color:var(--ink-3); font-size:12px}
+.brkrow button{padding:3px 7px}
 .nowline{position:absolute; inset-inline:0; height:0; z-index:15; pointer-events:none}
 .nowline::before{content:""; position:absolute; inset-inline:0; height:2px; background:var(--danger); top:-1px; opacity:.85}
 .nowline::after{
@@ -447,6 +466,7 @@ select.pill,input.pill{
       <button id="vBoard" aria-pressed="true">לוח</button>
       <button id="vList" aria-pressed="false">רשימה</button>
     </div>
+    <div class="seg hide-sm" id="groupTabs" role="group" aria-label="קבוצה"></div>
 
     <div class="spacer"></div>
 
@@ -470,6 +490,7 @@ select.pill,input.pill{
       </div>
       <div id="printHead" style="display:none"></div>
       <div id="viewSlot"></div>
+      <div id="printAll"></div>
     </main>
 
     <aside class="rail no-print" id="rail">
@@ -495,7 +516,8 @@ select.pill,input.pill{
           <label class="tg"><input type="checkbox" id="tgTeacher"> הצג מרצה</label>
           <label class="tg"><input type="checkbox" id="tgRoom"> הצג חדר</label>
           <label class="tg"><input type="checkbox" id="tgDur"> הצג משך</label>
-          <label class="tg"><input type="checkbox" id="tgGaps"> הצג הפסקות</label>
+          <label class="tg"><input type="checkbox" id="tgBreaks"> הפסקות קבועות</label>
+          <label class="tg"><input type="checkbox" id="tgGaps"> חלונות חופשיים</label>
           <label class="tg"><input type="checkbox" id="tgNow"> קו "עכשיו"</label>
           <label class="tg"><input type="checkbox" id="tgTags"> הצג תגיות קבוצה</label>
         </div>
@@ -528,6 +550,11 @@ select.pill,input.pill{
         <div class="field">
           <label>קבוצות</label>
           <div class="chips" id="groupEdit"></div>
+        </div>
+        <div class="field">
+          <label>הפסקות קבועות — זהות בכל יום</label>
+          <div id="breakList"></div>
+          <button class="btn" id="brkAdd" style="align-self:flex-start">＋ הפסקה</button>
         </div>
         <div class="field">
           <label for="semEnd">סוף הסמסטר (לייצוא ליומן)</label>
@@ -605,7 +632,9 @@ select.pill,input.pill{
       <div class="hint" style="margin-top:-6px">מייצא את הקבוצה המסוננת כרגע, כאירועים שבועיים חוזרים עד סוף הסמסטר.</div>
       <button class="btn" id="exJson" style="justify-content:center;padding:12px">💾 גיבוי מלא (JSON)</button>
       <button class="btn" id="exCsv" style="justify-content:center;padding:12px">📄 טבלה (CSV)</button>
-      <button class="btn" id="exPrint" style="justify-content:center;padding:12px">🖨 הדפסה / שמירה כ-PDF</button>
+      <button class="btn" id="exPrint" style="justify-content:center;padding:12px">🖨 הדפסה של הקבוצה המוצגת</button>
+      <button class="btn" id="exPrintAll" style="justify-content:center;padding:12px">🖨 הדפסה — עמוד לכל קבוצה</button>
+      <div class="hint" style="margin-top:-6px">כל קבוצה בעמוד נפרד, לפי הסדר A · B · C.</div>
     </div>
   </div>
 </div>
@@ -635,6 +664,11 @@ select.pill,input.pill{
 
 <style>
 .print-only{display:none}
+#printAll{display:none}
+@media print{
+  [data-printall] #viewSlot,[data-printall] .board-head,[data-printall] #printHead{display:none!important}
+  [data-printall] #printAll{display:block!important}
+}
 @media print{ .print-only{display:block; margin-bottom:6mm} }
 .print-only h1{font-family:"Rubik",sans-serif; font-size:20px}
 .print-only p{margin:3px 0 0; color:#444; font-size:12px}
@@ -686,35 +720,74 @@ function durTxt(m){const h=Math.floor(m/60),mm=m%60;return h&&mm?`${h}:${String(
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toast._i);toast._i=setTimeout(()=>t.classList.remove("show"),2200);}
 
 /* ---------------- seed ---------------- */
-function seedTable(){
-  const B=(day,start,end,title,teacher,room)=>({id:uid(),day,start,end,title,teacher,room,type:"lesson",groups:["A"],hue:null,note:""});
+const SEED_VERSION=3;
+// The four fixed daily breaks. They are the same every day and long lectures run
+// THROUGH them — they are not gaps between classes, which is what v1 wrongly derived.
+const DEFAULT_BREAKS=[
+  {start:"10:00",end:"10:15"},
+  {start:"11:45",end:"12:15"},
+  {start:"13:45",end:"14:15"},
+  {start:"15:45",end:"16:00"}
+];
+// Transcribed from the official ORT Singalovsky sheet (הנדסת תוכנה יד4, week 1, printed 31.08.2026).
+// Names in that sheet are surname-first; they are flipped here. A class with no group tag in the
+// source is shared by all three groups.
+function collegeTable(){
+  const ALL=["A","B","C"];
+  const L=(day,start,end,title,teacher,room,groups,type)=>
+    ({id:uid(),day,start,end,title,teacher,room,type:type||"lesson",groups,hue:null,note:""});
   return {
     id:uid(),
-    name:"סמסטר א׳ — יד4A",
+    name:"הנדסת תוכנה יד4 — סמסטר א׳",
     days:[0,1,3,4,5],
     start:"08:00", end:"17:00",
     semesterEnd:"2027-01-31",
     myGroup:"A",
     groups:[{id:"A",name:"קבוצה A"},{id:"B",name:"קבוצה B"},{id:"C",name:"קבוצה C"}],
+    breaks:DEFAULT_BREAKS.map(b=>({start:b.start,end:b.end})),
     blocks:[
-      B(0,"08:30","12:50","מערכות הפעלה","שאול קובל","4010"),
-      B(0,"12:50","16:10","אלגברה לינארית","אירן פיש","4010"),
-      B(1,"08:30","11:40","סייבר ואבטחת מידע","אלי גוריאל","4010"),
-      B(1,"12:05","14:30","הנדסת תוכנה","איר אוסטריצב","4110"),
-      B(3,"08:30","10:00","אלגברה לינארית","אירן פיש","4010"),
-      B(3,"10:10","12:50","תכנות מונחה עצמים (OOP)","אלי גוריאל","3226"),
-      B(3,"12:50","15:15","טכנולוגיות בהנדסת תוכנה","אסף אמיר","3226"),
-      B(4,"08:30","10:55","למידת מכונה","אפרת ויינברג","3230"),
-      B(4,"10:55","13:35","מערכות אוטונומיות","יקיר רפאלי","4106"),
-      B(5,"08:30","13:35","תקשורת נתונים ורשתות","קובי גודן","4010")
+      /* יום א — כל הקבוצות יחד */
+      L(0,"08:30","12:50","עקרונות מערכות הפעלה","שאול קובל","4010",ALL),
+      L(0,"12:50","16:10","אלגברה לינארית","אירן פיש","4010",ALL),
+      /* יום ב */
+      L(1,"08:30","11:40","סייבר ואבטחת מידע","אלי גוריאל","4010",ALL),
+      L(1,"12:05","14:30","הנדסת תוכנה","איר אוסטריצב","4110",["A"]),
+      L(1,"12:05","14:30","טכנולוגיות הנדסת תוכנה","אסף עמיר","3230",["C"]),
+      L(1,"14:30","17:00","הנדסת תוכנה","איר אוסטריצב","3228",["B"]),
+      /* יום ד */
+      L(3,"08:30","10:00","אלגברה לינארית","אירן פיש","4010",ALL),
+      L(3,"10:10","12:50","תכנות מונחה עצמים","אלי גוריאל","3226",["A"]),
+      L(3,"10:10","12:50","טכנולוגיות הנדסת תוכנה","אסף עמיר","3228",["B"]),
+      L(3,"10:10","12:50","הנדסת תוכנה","איר אוסטריצב","3230",["C"]),
+      L(3,"12:50","15:15","טכנולוגיות הנדסת תוכנה","אסף עמיר","3226",["A"]),
+      L(3,"12:50","15:15","machine Learning","אפרת וינברג","3228",["C"]),
+      L(3,"14:30","17:00","מעבדת מערכות אוטונומיות","יקיר רפאלי","3230",["B"],"lab"),
+      /* יום ה — לכל קבוצה מסלול משלה */
+      L(4,"08:30","10:55","machine Learning","אפרת וינברג","3230",["A"]),
+      L(4,"08:30","10:55","תכנות מונחה עצמים","אלי גוריאל","4206",["B"]),
+      L(4,"08:30","10:55","מעבדת מערכות אוטונומיות","יקיר רפאלי","4106",["C"],"lab"),
+      L(4,"10:55","13:35","מעבדת מערכות אוטונומיות","יקיר רפאלי","4106",["A"],"lab"),
+      L(4,"10:55","13:35","machine Learning","אפרת וינברג","3230",["B"]),
+      L(4,"10:55","13:35","תכנות מונחה עצמים","אלי גוריאל","4206",["C"]),
+      /* יום ו — כל הקבוצות יחד */
+      L(5,"08:30","13:35","תקשורת נתונים ורשתות","קובי גוזן","4010",ALL)
     ]
   };
 }
 function freshState(){
-  const t=seedTable();
-  return {v:1,savedAt:Date.now(),activeId:t.id,tables:[t],
+  const t=collegeTable();
+  return {v:1,seedVersion:SEED_VERSION,savedAt:Date.now(),activeId:t.id,tables:[t],
     ui:{view:"board",colorMode:"subject",filter:"A",ppm:1.15,
-        showTeacher:true,showRoom:true,showDur:true,showGaps:true,showNow:true,showTags:false}};
+        showTeacher:true,showRoom:true,showDur:true,showBreaks:true,showGaps:true,showNow:true,showTags:false}};
+}
+// Anyone already carrying the wrong v1/v2 data gets the corrected table added and
+// selected; their own tables are left alone rather than silently overwritten.
+function ensureSeed(){
+  if(st.seedVersion===SEED_VERSION)return false;
+  const t=collegeTable();
+  st.tables.push(t); st.activeId=t.id; st.ui.filter=t.myGroup;
+  st.seedVersion=SEED_VERSION;
+  return true;
 }
 
 let st=freshState();
@@ -755,6 +828,7 @@ function migrate(s){
     t.groups=t.groups&&t.groups.length?t.groups:[{id:"A",name:"קבוצה A"}];
     t.start=t.start||"08:00"; t.end=t.end||"17:00";
     t.semesterEnd=t.semesterEnd||"2027-01-31";
+    t.breaks=Array.isArray(t.breaks)?t.breaks:DEFAULT_BREAKS.map(b=>({start:b.start,end:b.end}));
     t.blocks=(t.blocks||[]).map(b=>Object.assign({type:"lesson",groups:[],hue:null,note:"",teacher:"",room:""},b));
   });
   if(!s.tables.find(t=>t.id===s.activeId))s.activeId=s.tables[0].id;
@@ -777,7 +851,7 @@ async function initRemote(){
     const d=snap.exists?snap.data():null;
     if(d&&d.payload){
       const parsed=JSON.parse(d.payload);
-      if(parsed&&parsed.tables&&(parsed.savedAt||0)>=(st.savedAt||0)){ lastPushed=d.payload; adopt(parsed); renderAll(); }
+      if(parsed&&parsed.tables&&(parsed.savedAt||0)>=(st.savedAt||0)){ lastPushed=d.payload; adopt(parsed); if(ensureSeed())save(); renderAll(); }
       else pushRemote();
     }else pushRemote();
   }catch(e){}
@@ -786,7 +860,7 @@ async function initRemote(){
       const d=s.exists?s.data():null; if(!d||!d.payload)return;
       if(d.payload===lastPushed)return;
       if((d.savedAt||0)<=(st.savedAt||0))return;
-      try{ const p=JSON.parse(d.payload); if(p&&p.tables){ lastPushed=d.payload; adopt(p); renderAll(); } }catch(e){}
+      try{ const p=JSON.parse(d.payload); if(p&&p.tables){ lastPushed=d.payload; adopt(p); if(ensureSeed())save(); renderAll(); } }catch(e){}
     },()=>{});
   }catch(e){}
 }
@@ -795,6 +869,12 @@ async function initRemote(){
 function bStart(b){return s2m(b.start);}
 function bEnd(b){return s2m(b.end);}
 function bDur(b){return Math.max(5,bEnd(b)-bStart(b));}
+function breaksOf(){return (T().breaks||[]).slice().sort((a,b)=>s2m(a.start)-s2m(b.start));}
+/* minutes of fixed break time falling inside [s,e) — a 4h20 lecture is not 4h20 of teaching */
+function breakMinIn(s,e){
+  return breaksOf().reduce((a,br)=>a+Math.max(0,Math.min(e,s2m(br.end))-Math.max(s,s2m(br.start))),0);
+}
+function netDur(b){return b.type==="break"?0:Math.max(0,bDur(b)-breakMinIn(bStart(b),bEnd(b)));}
 function visible(){
   const t=T(), f=st.ui.filter;
   return t.blocks.filter(b=>f==="all"||!b.groups||!b.groups.length||b.groups.includes(f));
@@ -844,7 +924,8 @@ function gapsFor(list){
   const gaps=[];
   for(let i=1;i<merged.length;i++){
     const g=merged[i][0]-merged[i-1][1];
-    if(g>=5&&g<=180)gaps.push({s:merged[i-1][1],e:merged[i][0],len:g});
+    const s0=merged[i-1][1], e0=merged[i][0];
+    if(g>=5&&g<=180&&breakMinIn(s0,e0)<g*0.6)gaps.push({s:s0,e:e0,len:g});
   }
   return gaps;
 }
@@ -870,7 +951,7 @@ function dayStats(day){
   const solid=list.filter(b=>b.type!=="break");
   const src=solid.length?solid:list;
   const s=Math.min(...src.map(bStart)), e=Math.max(...src.map(bEnd));
-  const net=solid.reduce((a,b)=>a+bDur(b),0);
+  const net=solid.reduce((a,b)=>a+netDur(b),0);
   return {count:solid.length,s,e,net,span:e-s};
 }
 
@@ -883,10 +964,10 @@ function renderBoard(){
   const vis=visible();
 
   let h=`<div class="board-scroll"><div class="board" style="--cols:${cols.length}; --ppm:${ppm}">`;
-  h+=`<div class="hcell corner"></div>`;
-  cols.forEach(d=>{
+  h+=`<div class="hcell corner" style="grid-row:1; grid-column:1"></div>`;
+  cols.forEach((d,ci)=>{
     const s=dayStats(d);
-    h+=`<div class="hcell${d===today?" today":""}${s?"":" empty"}">
+    h+=`<div class="hcell${d===today?" today":""}${s?"":" empty"}" style="grid-row:1; grid-column:${ci+2}">
       <div class="dn">${DAYS[d]}</div>
       ${s?`<div class="span">${m2s(s.s)}–${m2s(s.e)}</div>
            <div class="cnt">${s.count} שיעורים · ${hoursTxt(s.net)}</div>`
@@ -895,19 +976,19 @@ function renderBoard(){
   });
 
   // ruler
-  h+=`<div class="ruler" style="height:${total*ppm}px">`;
+  h+=`<div class="ruler" style="grid-row:2; grid-column:1; height:${total*ppm}px">`;
   for(let m=r0;m<=r1;m+=60){
     h+=`<div class="tick" style="top:${(m-r0)*ppm}px"><span>${m2s(m)}</span></div>`;
   }
   h+=`</div>`;
 
-  cols.forEach(d=>{
+  cols.forEach((d,ci)=>{
     const list=layoutDay(vis.filter(b=>b.day===d));
-    h+=`<div class="col${d===today?" today":""}" data-day="${d}" style="height:${total*ppm}px">`;
+    h+=`<div class="col${d===today?" today":""}" data-day="${d}" style="grid-row:2; grid-column:${ci+2}; height:${total*ppm}px">`;
     if(st.ui.showGaps){
       gapsFor(vis.filter(b=>b.day===d)).forEach(g=>{
         const hh=g.len*ppm;
-        h+=`<div class="gap" style="top:${(g.s-r0)*ppm}px; height:${hh}px">${hh>=16?`<span>הפסקה · ${g.len} דק׳</span>`:""}</div>`;
+        h+=`<div class="gap" style="top:${(g.s-r0)*ppm}px; height:${hh}px">${hh>=16?`<span>חלון חופשי · ${gapTxt(g.len)}</span>`:""}</div>`;
       });
     }
     list.forEach(b=>{
@@ -934,6 +1015,19 @@ function renderBoard(){
     }
     h+=`</div>`;
   });
+  if(st.ui.showBreaks){
+    const brs=breaksOf().filter(b=>s2m(b.end)>r0&&s2m(b.start)<r1);
+    if(brs.length){
+      h+=`<div class="breaks-layer" style="grid-row:2; grid-column:2 / -1; height:${total*ppm}px">`;
+      brs.forEach(b=>{
+        const bs=Math.max(s2m(b.start),r0), be=Math.min(s2m(b.end),r1), hh=(be-bs)*ppm;
+        h+=`<div class="brk" style="top:${(bs-r0)*ppm}px; height:${hh}px">
+          ${hh>=15?`<span>הפסקה<span class="t">${b.start}–${b.end}</span></span>`:""}
+        </div>`;
+      });
+      h+=`</div>`;
+    }
+  }
   h+=`</div></div>`;
   return h;
 }
@@ -957,17 +1051,24 @@ function renderList(){
         <div class="tm">${m2s(bStart(b))}–${m2s(bEnd(b))}</div>
         <div class="bar"></div>
         <div><div class="nm">${esc(b.title||"ללא שם")}</div>
-        <div class="sub">${[b.teacher&&esc(b.teacher),b.room&&("חדר "+esc(b.room)),TYPES[b.type]!=="הרצאה"?TYPES[b.type]:"",b.note&&esc(b.note)].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
+        <div class="sub">${[b.teacher&&esc(b.teacher),b.room&&("חדר "+esc(b.room)),TYPES[b.type]!=="הרצאה"?TYPES[b.type]:"",b.note&&esc(b.note),
+          st.ui.showBreaks?innerBreaks(b):""].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
         <div class="rt">${durTxt(bDur(b))}</div>
       </div>`;
       const nx=list[i+1];
       if(nx){const g=gaps.find(x=>x.s===bEnd(b)&&x.e===bStart(nx));
-        if(g)h+=`<div class="lrow brk"><div class="tm">${m2s(g.s)}–${m2s(g.e)}</div><div class="bar" style="background:var(--line-2)"></div><div><div class="nm">הפסקה</div></div><div class="rt">${g.len}ד׳</div></div>`;}
+        if(g)h+=`<div class="lrow brk"><div class="tm">${m2s(g.s)}–${m2s(g.e)}</div><div class="bar" style="background:var(--line-2)"></div><div><div class="nm">חלון חופשי</div></div><div class="rt">${gapTxt(g.len)}</div></div>`;}
     });
     h+=`</section>`;
   });
   h+=`</div>`;
   return h;
+}
+
+function innerBreaks(b){
+  const inside=breaksOf().filter(br=>s2m(br.start)>=bStart(b)&&s2m(br.end)<=bEnd(b));
+  if(!inside.length)return "";
+  return "כולל הפסקה " + inside.map(br=>`<span class="tm">${br.start}–${br.end}</span>`).join(" ו-");
 }
 
 /* ---------------- render: rail + chrome ---------------- */
@@ -985,6 +1086,12 @@ function renderRail(){
   $$("#colorChips .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.cm===st.ui.colorMode)));
   $("#tgTeacher").checked=st.ui.showTeacher; $("#tgRoom").checked=st.ui.showRoom;
   $("#tgDur").checked=st.ui.showDur; $("#tgGaps").checked=st.ui.showGaps;
+  $("#tgBreaks").checked=st.ui.showBreaks;
+  $("#breakList").innerHTML=breaksOf().map((b,i)=>
+    `<div class="brkrow"><input type="time" step="300" data-bi="${i}" data-bk="start" value="${b.start}">
+     <span>–</span><input type="time" step="300" data-bi="${i}" data-bk="end" value="${b.end}">
+     <button class="btn ghost" data-bdel="${i}" aria-label="מחיקת הפסקה">✕</button></div>`).join("")
+    || `<div class="hint">אין הפסקות קבועות.</div>`;
   $("#tgNow").checked=st.ui.showNow; $("#tgTags").checked=st.ui.showTags;
   $("#density").value=st.ui.ppm;
 
@@ -999,7 +1106,7 @@ function renderRail(){
       label={a:"עד שעה וחצי",b:"שעה וחצי עד שעתיים וחצי",c:"שעתיים וחצי עד 3.5 שעות",d:"3.5 עד 4.5 שעות",e:"מעל 4.5 שעות"}[key];
     } else {key=(b.title||"").trim();label=key||"ללא שם";}
     const cur=buckets.get(key)||{label,h:hueFor(b),min:0,n:0};
-    cur.min+=bDur(b); cur.n++; buckets.set(key,cur);
+    cur.min+=netDur(b); cur.n++; buckets.set(key,cur);
   });
   $("#legend").innerHTML=[...buckets.values()].sort((a,b)=>b.min-a.min)
     .map(v=>`<div class="lg"><span class="sw" style="--h:${v.h}"></span><span class="nm">${esc(v.label)}</span><span class="hr">${hoursTxt(v.min)}</span></div>`).join("")
@@ -1007,7 +1114,8 @@ function renderRail(){
 
   // stats
   const solid=vis.filter(b=>b.type!=="break");
-  const net=solid.reduce((a,b)=>a+bDur(b),0);
+  const net=solid.reduce((a,b)=>a+netDur(b),0);
+  const inBreaks=solid.reduce((a,b)=>a+breakMinIn(bStart(b),bEnd(b)),0);
   const perDay=t.days.map(d=>({d,s:dayStats(d)})).filter(x=>x.s);
   const busiest=perDay.slice().sort((a,b)=>b.s.net-a.s.net)[0];
   const totalGaps=t.days.reduce((a,d)=>a+gapsFor(vis.filter(b=>b.day===d)).reduce((x,g)=>x+g.len,0),0);
@@ -1020,7 +1128,7 @@ function renderRail(){
     ["מקצועות",subjects,0],
     ["מרצים",teachers,0],
     ["ימי לימוד",perDay.length,0],
-    ["הפסקות",totalGaps?gapTxt(totalGaps):"—",1],
+    ["הפסקות",inBreaks?gapTxt(inBreaks):"—",1],
   ].map(([k,v,he])=>`<div class="stat"><div class="k">${k}</div><div class="v${he?" he":""}">${v}</div></div>`).join("")
    +(busiest?`<div class="stat" style="grid-column:1/-1"><div class="k">היום העמוס ביותר</div><div class="v he">${DAYS[busiest.d]} · ${hoursTxt(busiest.s.net)}</div></div>`:"")
    +(nBad?`<div class="stat" style="grid-column:1/-1;border-color:var(--danger)"><div class="k">התנגשויות</div><div class="v he" style="color:var(--danger)">${nBad} שיעורים חופפים</div></div>`:"");
@@ -1041,6 +1149,9 @@ function renderChrome(){
   $("#tblName").textContent=t.name;
   const g=t.groups.find(x=>x.id===st.ui.filter);
   $("#tblMeta").textContent=(st.ui.filter==="all"?"כל הקבוצות":(g?g.name:st.ui.filter))+" · "+t.days.length+" ימי לימוד";
+  $("#groupTabs").innerHTML=t.groups.map(g=>
+    `<button data-g="${esc(g.id)}" aria-pressed="${st.ui.filter===g.id}">${esc(g.id)}</button>`).join("")
+    +`<button data-g="all" aria-pressed="${st.ui.filter==="all"}">הכל</button>`;
   $("#vBoard").setAttribute("aria-pressed",String(st.ui.view==="board"));
   $("#vList").setAttribute("aria-pressed",String(st.ui.view==="list"));
   $("#undoBtn").disabled=!hist.length; $("#redoBtn").disabled=!future.length;
@@ -1287,10 +1398,30 @@ document.addEventListener("keydown",e=>{
 });
 
 /* rail interactions */
+function pickGroup(g){st.ui.filter=g;save();renderAll();}
 on("#groupChips","click",e=>{const b=e.target.closest("[data-g]");if(!b)return;
-  st.ui.filter=b.dataset.g;save();renderAll();if(isNarrow())setRail(false);});
+  pickGroup(b.dataset.g);if(isNarrow())setRail(false);});
+on("#groupTabs","click",e=>{const b=e.target.closest("[data-g]");if(!b)return;pickGroup(b.dataset.g);});
+on("#breakList","change",e=>{
+  const i=e.target.dataset.bi; if(i==null)return;
+  pushHistory();
+  const t=T(), arr=breaksOf();
+  arr[+i][e.target.dataset.bk]=e.target.value;
+  t.breaks=arr.filter(b=>s2m(b.end)>s2m(b.start)).sort((a,b)=>s2m(a.start)-s2m(b.start));
+  save(); renderAll();
+});
+on("#breakList","click",e=>{
+  const b=e.target.closest("[data-bdel]"); if(!b)return;
+  pushHistory(); const arr=breaksOf(); arr.splice(+b.dataset.bdel,1); T().breaks=arr;
+  save(); renderAll();
+});
+on("#brkAdd","click",()=>{
+  pushHistory(); T().breaks=breaksOf().concat([{start:"12:00",end:"12:15"}])
+    .sort((a,b)=>s2m(a.start)-s2m(b.start));
+  save(); renderAll();
+});
 on("#colorChips","click",e=>{const b=e.target.closest("[data-cm]");if(!b)return;st.ui.colorMode=b.dataset.cm;save();renderAll();});
-[["#tgTeacher","showTeacher"],["#tgRoom","showRoom"],["#tgDur","showDur"],["#tgGaps","showGaps"],["#tgNow","showNow"],["#tgTags","showTags"]]
+[["#tgTeacher","showTeacher"],["#tgRoom","showRoom"],["#tgDur","showDur"],["#tgBreaks","showBreaks"],["#tgGaps","showGaps"],["#tgNow","showNow"],["#tgTags","showTags"]]
   .forEach(([sel,key])=>on(sel,"change",e=>{st.ui[key]=e.target.checked;save();renderView();}));
 on("#density","input",e=>{st.ui.ppm=+e.target.value;renderView();});
 on("#density","change",()=>save());
@@ -1475,6 +1606,20 @@ on("#exIcs","click",()=>{offer(safeName(T().name)+".ics",buildIcs());$("#scrim3"
 on("#exJson","click",()=>{offer("shaaton-backup.json",JSON.stringify(st,noPriv,2));$("#scrim3").hidden=true;});
 on("#exCsv","click",()=>{offer(safeName(T().name)+".csv",buildCsv());$("#scrim3").hidden=true;});
 on("#exPrint","click",()=>{$("#scrim3").hidden=true;setTimeout(()=>window.print(),120);});
+on("#exPrintAll","click",()=>{$("#scrim3").hidden=true;setTimeout(printAllGroups,120);});
+function printAllGroups(){
+  const t=T(), saved=st.ui.filter, host=$("#printAll");
+  host.innerHTML=t.groups.map((g,i)=>{
+    st.ui.filter=g.id;
+    return `<section class="pg"${i?' style="break-before:page;page-break-before:always"':''}>
+      <div class="print-only"><h1>${esc(t.name)}</h1><p>${esc(g.name)} · הופק ב-${new Date().toLocaleDateString("he-IL")}</p></div>
+      ${renderBoard()}</section>`;
+  }).join("");
+  st.ui.filter=saved;
+  document.documentElement.setAttribute("data-printall","1");
+  window.print();
+  setTimeout(()=>{host.innerHTML="";document.documentElement.removeAttribute("data-printall");renderAll();},600);
+}
 function safeName(s){return (String(s||"schedule").replace(/[\\/:*?"<>|]+/g,"-").trim()||"schedule").slice(0,60);}
 
 /* ---------------- boot ---------------- */
@@ -1483,6 +1628,7 @@ function measure(){const h=$(".topbar").getBoundingClientRect().height;document.
 window.addEventListener("resize",measure);
 const hadSaved=loadLocal();
 if(!hadSaved&&window.innerWidth<=700)st.ui.view="list";
+if(ensureSeed())save();
 renderAll();
 measure();
 initRemote();
