@@ -196,7 +196,7 @@ select.pill,input.pill{
 
 .legend{display:flex; flex-direction:column; gap:3px}
 .lg{display:flex; align-items:center; gap:8px; font-size:13px; padding:2px 0}
-.lg .sw{width:11px; height:11px; border-radius:3px; flex:none; background:hsl(var(--h) var(--blk-bar-s) var(--blk-bar-l))}
+.lg .sw{width:11px; height:11px; border-radius:3px; flex:none; background:var(--c-bar,hsl(var(--h) var(--blk-bar-s) var(--blk-bar-l)))}
 .lg .nm{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink-2)}
 .lg .hr{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-3)}
 
@@ -211,6 +211,28 @@ select.pill,input.pill{
 .row2{display:grid; grid-template-columns:1fr 1fr; gap:9px}
 .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px}
 .hint{font-size:11.5px; color:var(--ink-3)}
+
+
+/* ===== weight ramp: colour encodes how long the lecture is =====
+   w0 עד 1:30 (mint) -> w1 עד 2:30 (sky) -> w2 עד 3:30 (amber) -> w3 עד 4:30 (orange) -> w4 מעל 4:30 (red).
+   Light theme goes lighter->deeper; dark theme goes dimmer->brighter, so "heavy" reads as heavy in both. */
+[data-color="duration"] .w0{--c-bg:hsl(152 55% 93%);--c-bd:hsl(152 40% 73%);--c-tx:hsl(155 52% 25%);--c-bar:hsl(152 50% 43%);--c-mut:hsl(152 18% 41%)}
+[data-color="duration"] .w1{--c-bg:hsl(196 60% 92%);--c-bd:hsl(196 45% 71%);--c-tx:hsl(200 58% 26%);--c-bar:hsl(197 58% 44%);--c-mut:hsl(198 20% 41%)}
+[data-color="duration"] .w2{--c-bg:hsl(44 88% 89%);--c-bd:hsl(40 60% 66%);--c-tx:hsl(32 68% 28%);--c-bar:hsl(40 76% 47%);--c-mut:hsl(38 28% 39%)}
+[data-color="duration"] .w3{--c-bg:hsl(24 90% 90%);--c-bd:hsl(22 66% 68%);--c-tx:hsl(18 66% 31%);--c-bar:hsl(22 78% 50%);--c-mut:hsl(20 30% 41%)}
+[data-color="duration"] .w4{--c-bg:hsl(4 84% 91%);--c-bd:hsl(4 60% 72%);--c-tx:hsl(358 60% 34%);--c-bar:hsl(4 68% 52%);--c-mut:hsl(2 28% 43%)}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"])[data-color="duration"] .w0{--c-bg:hsl(155 28% 15%);--c-bd:hsl(152 28% 31%);--c-tx:hsl(152 58% 74%);--c-bar:hsl(152 52% 48%);--c-mut:hsl(152 20% 59%)}
+  :root:not([data-theme="light"])[data-color="duration"] .w1{--c-bg:hsl(198 30% 16%);--c-bd:hsl(196 30% 33%);--c-tx:hsl(196 62% 76%);--c-bar:hsl(197 60% 52%);--c-mut:hsl(198 22% 61%)}
+  :root:not([data-theme="light"])[data-color="duration"] .w2{--c-bg:hsl(40 32% 17%);--c-bd:hsl(40 32% 34%);--c-tx:hsl(44 72% 70%);--c-bar:hsl(42 70% 55%);--c-mut:hsl(40 26% 61%)}
+  :root:not([data-theme="light"])[data-color="duration"] .w3{--c-bg:hsl(22 36% 18%);--c-bd:hsl(22 36% 35%);--c-tx:hsl(26 78% 72%);--c-bar:hsl(24 74% 57%);--c-mut:hsl(22 28% 63%)}
+  :root:not([data-theme="light"])[data-color="duration"] .w4{--c-bg:hsl(3 38% 19%);--c-bd:hsl(4 40% 37%);--c-tx:hsl(6 78% 75%);--c-bar:hsl(4 70% 58%);--c-mut:hsl(4 30% 65%)}
+}
+:root[data-theme="dark"][data-color="duration"] .w0{--c-bg:hsl(155 28% 15%);--c-bd:hsl(152 28% 31%);--c-tx:hsl(152 58% 74%);--c-bar:hsl(152 52% 48%);--c-mut:hsl(152 20% 59%)}
+:root[data-theme="dark"][data-color="duration"] .w1{--c-bg:hsl(198 30% 16%);--c-bd:hsl(196 30% 33%);--c-tx:hsl(196 62% 76%);--c-bar:hsl(197 60% 52%);--c-mut:hsl(198 22% 61%)}
+:root[data-theme="dark"][data-color="duration"] .w2{--c-bg:hsl(40 32% 17%);--c-bd:hsl(40 32% 34%);--c-tx:hsl(44 72% 70%);--c-bar:hsl(42 70% 55%);--c-mut:hsl(40 26% 61%)}
+:root[data-theme="dark"][data-color="duration"] .w3{--c-bg:hsl(22 36% 18%);--c-bd:hsl(22 36% 35%);--c-tx:hsl(26 78% 72%);--c-bar:hsl(24 74% 57%);--c-mut:hsl(22 28% 63%)}
+:root[data-theme="dark"][data-color="duration"] .w4{--c-bg:hsl(3 38% 19%);--c-bd:hsl(4 40% 37%);--c-tx:hsl(6 78% 75%);--c-bar:hsl(4 70% 58%);--c-mut:hsl(4 30% 65%)}
 
 /* ============ board ============ */
 .main{flex:1; min-width:0; padding:14px 16px 60px; display:flex; flex-direction:column; gap:12px}
@@ -276,11 +298,16 @@ select.pill,input.pill{
 .col.dropz{background-color:color-mix(in srgb, var(--accent) 9%, transparent)}
 
 .blk{
+  --c-bg:hsl(var(--h) var(--blk-s) var(--blk-l));
+  --c-bd:hsl(var(--h) var(--blk-bs) var(--blk-bl));
+  --c-tx:hsl(var(--h) var(--blk-ts) var(--blk-tl));
+  --c-bar:hsl(var(--h) var(--blk-bar-s) var(--blk-bar-l));
+  --c-mut:hsl(var(--h) var(--blk-ms) var(--blk-ml));
   position:absolute; overflow:hidden; cursor:grab;
   border-radius:var(--radius); padding:6px 9px 6px 8px;
-  border:1px solid hsl(var(--h) var(--blk-bs) var(--blk-bl));
-  background:hsl(var(--h) var(--blk-s) var(--blk-l));
-  color:hsl(var(--h) var(--blk-ts) var(--blk-tl));
+  border:1px solid var(--c-bd);
+  background:var(--c-bg);
+  color:var(--c-tx);
   display:flex; flex-direction:column; gap:1px;
   touch-action:none; user-select:none;
   transition:box-shadow .12s, filter .12s;
@@ -288,7 +315,7 @@ select.pill,input.pill{
 }
 .blk::before{
   content:""; position:absolute; inset-block:0; inset-inline-start:0; width:3px;
-  background:hsl(var(--h) var(--blk-bar-s) var(--blk-bar-l));
+  background:var(--c-bar);
 }
 .blk:hover{box-shadow:var(--shadow); filter:saturate(1.12)}
 .blk.dragging{cursor:grabbing; box-shadow:var(--shadow-lg); z-index:20; opacity:.95}
@@ -300,7 +327,7 @@ select.pill,input.pill{
   font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:500;
   direction:ltr; unicode-bidi:isolate; opacity:.92;
 }
-.blk .m{font-size:11.5px; color:hsl(var(--h) var(--blk-ms) var(--blk-ml)); line-height:1.3}
+.blk .m{font-size:11.5px; color:var(--c-mut); line-height:1.3}
 .blk .m .rm{font-family:"IBM Plex Mono",monospace; direction:ltr; unicode-bidi:isolate}
 .blk .tags{display:flex; gap:3px; flex-wrap:wrap; margin-top:auto; padding-top:2px}
 .blk .tag{
@@ -321,6 +348,26 @@ select.pill,input.pill{
 .blk[data-type="break"]::before{display:none}
 .blk[data-type="exam"]{border-width:2px; border-style:double}
 
+.blk.cont .t{font-weight:500; opacity:.74}
+.blk .cont-tag{
+  font-size:9px; font-weight:700; letter-spacing:.06em; opacity:.5;
+  border:1px solid currentColor; border-radius:4px; padding:0 4px;
+  margin-inline-start:6px; vertical-align:2px;
+}
+/* a lecture cut by a break keeps rounded ends only at its true start and finish */
+.blk.seg-first{border-end-start-radius:3px; border-end-end-radius:3px}
+.blk.seg-mid{border-radius:3px}
+.blk.seg-last{border-start-start-radius:3px; border-start-end-radius:3px}
+.brkblk{
+  position:absolute; overflow:hidden; border-radius:6px; cursor:default;
+  border:1px dashed var(--line-2);
+  background:repeating-linear-gradient(135deg, var(--panel-2) 0 5px, var(--panel-3) 5px 10px);
+  color:var(--ink-3);
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  font-size:10.5px; font-weight:700; letter-spacing:.02em; white-space:nowrap;
+}
+.brkblk .t{font-family:"IBM Plex Mono",monospace; direction:ltr; unicode-bidi:isolate; font-weight:500; opacity:.85}
+.brkblk.mini{font-size:9.5px; gap:4px}
 .gap{
   position:absolute; inset-inline:6px; z-index:1;
   border-block:1px dashed var(--line-2);
@@ -331,21 +378,6 @@ select.pill,input.pill{
   font-size:10.5px; color:var(--ink-3); background:var(--panel);
   padding:0 6px; border-radius:5px; white-space:nowrap; font-weight:600;
 }
-.breaks-layer{position:relative; pointer-events:none; z-index:4}
-.brk{
-  position:absolute; inset-inline:0;
-  background:repeating-linear-gradient(135deg,
-    transparent 0 5px,
-    color-mix(in srgb, var(--ink) 7%, transparent) 5px 10px);
-  border-block:1px dashed var(--line-2);
-  display:flex; align-items:center; justify-content:center;
-}
-.brk span{
-  font-size:10.5px; font-weight:700; letter-spacing:.03em; color:var(--ink-2);
-  background:var(--panel); padding:1px 9px; border-radius:6px;
-  border:1px solid var(--line); white-space:nowrap;
-}
-.brk span .t{font-family:"IBM Plex Mono",monospace; direction:ltr; unicode-bidi:isolate; opacity:.7; margin-inline-start:5px}
 .brkrow{display:grid; grid-template-columns:1fr auto 1fr auto; gap:5px; align-items:center; margin-bottom:5px}
 .brkrow input{padding:5px 6px!important; font-size:12.5px}
 .brkrow > span{color:var(--ink-3); font-size:12px}
@@ -382,12 +414,11 @@ select.pill,input.pill{
 .lrow:last-child{border-bottom:0}
 .lrow:hover{background:var(--panel-2)}
 .lrow .tm{font-family:"IBM Plex Mono",monospace; font-size:12.5px; direction:ltr; unicode-bidi:isolate; color:var(--ink-2)}
-.lrow .bar{width:5px; height:26px; border-radius:3px; background:hsl(var(--h) var(--blk-bar-s) var(--blk-bar-l))}
+.lrow .bar{width:5px; height:26px; border-radius:3px; background:var(--c-bar,hsl(var(--h) var(--blk-bar-s) var(--blk-bar-l)))}
 .lrow .nm{font-family:"Rubik",sans-serif; font-weight:600; font-size:14.5px}
 .lrow .sub{font-size:12.5px; color:var(--ink-3)}
 .lrow .rt{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-3); direction:ltr; unicode-bidi:isolate}
-.lrow.brk{opacity:.62}
-.lrow.brk .nm{font-weight:400; font-style:italic}
+.lrow.lrow.brk .nm{font-weight:400; font-style:italic}
 
 /* ============ modal ============ */
 .scrim{
@@ -737,6 +768,9 @@ function hueMap(kind){
   _hueMaps[kind]=out; return out;
 }
 function invalidateHues(){_hueMaps.subject=null;_hueMaps.teacher=null;}
+const WEIGHTS=[90,150,210,270];
+const WEIGHT_LABELS=["עד שעה וחצי","שעה וחצי עד שעתיים וחצי","שעתיים וחצי עד 3.5 שעות","3.5 עד 4.5 שעות","מעל 4.5 שעות"];
+function weightOf(m){let i=0;while(i<WEIGHTS.length&&m>WEIGHTS[i])i++;return i;}
 function durHue(m){const x=clamp(m,45,300);return Math.round(205-((x-45)/255)*200);}
 function gapTxt(m){return m<60?`${m} דק׳`:hoursTxt(m);}
 function hoursTxt(m){const h=Math.floor(m/60),mm=m%60;return mm?`${h}:${String(mm).padStart(2,"0")} ש׳`:`${h} ש׳`;}
@@ -801,7 +835,7 @@ function collegeTable(){
 function freshState(){
   const t=collegeTable();
   return {v:1,seedVersion:SEED_VERSION,savedAt:Date.now(),activeId:t.id,tables:[t],
-    ui:{view:"board",colorMode:"subject",filter:"A",ppm:1.15,
+    ui:{view:"board",colorMode:"duration",colorSet:true,filter:"A",ppm:1.15,
         showTeacher:true,showRoom:true,showDur:true,showBreaks:true,showGaps:true,showNow:true,showTags:false}};
 }
 // Anyone already carrying the wrong v1/v2 data gets the corrected table added and
@@ -875,7 +909,8 @@ async function initRemote(){
     const d=snap.exists?snap.data():null;
     if(d&&d.payload){
       const parsed=JSON.parse(d.payload);
-      if(parsed&&parsed.tables&&(parsed.savedAt||0)>=(st.savedAt||0)){ lastPushed=d.payload; adopt(parsed); if(ensureSeed())save(); renderAll(); }
+      if(parsed&&parsed.tables&&(parsed.savedAt||0)>=(st.savedAt||0)){ lastPushed=d.payload; adopt(parsed); if(!st.ui.colorSet){st.ui.colorMode="duration";st.ui.colorSet=true;}
+if(ensureSeed())save(); renderAll(); }
       else pushRemote();
     }else pushRemote();
   }catch(e){}
@@ -895,8 +930,23 @@ function bEnd(b){return s2m(b.end);}
 function bDur(b){return Math.max(5,bEnd(b)-bStart(b));}
 function breaksOf(){return (T().breaks||[]).slice().sort((a,b)=>s2m(a.start)-s2m(b.start));}
 /* minutes of fixed break time falling inside [s,e) — a 4h20 lecture is not 4h20 of teaching */
-function breakMinIn(s,e){
-  return breaksOf().reduce((a,br)=>a+Math.max(0,Math.min(e,s2m(br.end))-Math.max(s,s2m(br.start))),0);
+function breaksInside(s,e){
+  return breaksOf().map(br=>[s2m(br.start),s2m(br.end)]).filter(([a,z])=>a>=s&&z<=e&&z>a);
+}
+function breakMinIn(s,e){return breaksInside(s,e).reduce((a,[x,z])=>a+(z-x),0);}
+/* a lecture is cut into teaching segments by the breaks that fall inside it */
+function segmentsOf(b){
+  const s=bStart(b), e=bEnd(b);
+  if(b.type==="break"||!st.ui.showBreaks)return {segs:[[s,e]],brks:[]};
+  const brks=breaksInside(s,e);
+  if(!brks.length)return {segs:[[s,e]],brks:[]};
+  const segs=[]; let cur=s;
+  brks.forEach(([x,z])=>{ if(x>cur)segs.push([cur,x]); cur=z; });
+  if(cur<e)segs.push([cur,e]);
+  return {segs:segs.length?segs:[[s,e]],brks};
+}
+function weightClass(b){
+  return st.ui.colorMode==="duration"&&b.type!=="break" ? "w"+weightOf(bDur(b)) : "";
 }
 function netDur(b){return b.type==="break"?0:Math.max(0,bDur(b)-breakMinIn(bStart(b),bEnd(b)));}
 function visible(){
@@ -1016,22 +1066,35 @@ function renderBoard(){
       });
     }
     list.forEach(b=>{
-      const top=(bStart(b)-r0)*ppm, hh=bDur(b)*ppm, lanes=b._lanes||1, lane=b._lane||0;
-      const w=100/lanes;
-      const tiny=hh<38, mid=hh<62;
+      const lanes=b._lanes||1, lane=b._lane||0, w=100/lanes, cc=weightClass(b);
+      const place=(a,z)=>`top:${(a-r0)*ppm}px; height:${Math.max(13,(z-a)*ppm-2)}px; `+
+        `inset-inline-start:calc(${lane*w}% + 3px); width:calc(${w}% - 6px)`;
+      const {segs,brks}=segmentsOf(b);
       const groups=(b.groups||[]);
-      h+=`<div class="blk${tiny?" tiny":""}${bad.has(b.id)?" conflict":""}" data-id="${b.id}" data-type="${b.type}"
-        style="--h:${hueFor(b)}; top:${top}px; height:${Math.max(18,hh-2)}px;
-               inset-inline-start:calc(${lane*w}% + 3px); width:calc(${w}% - 6px)">
-        <div class="hnd top"></div>
-        <div class="t">${esc(b.title||"ללא שם")}</div>
-        ${tiny?"":`<div class="times">${m2s(bStart(b))}–${m2s(bEnd(b))}${st.ui.showDur?` <span class="sep">·</span> ${durTxt(bDur(b))}`:""}</div>`}
-        ${(!mid&&st.ui.showTeacher&&b.teacher)?`<div class="m">${esc(b.teacher)}</div>`:""}
-        ${(!mid&&st.ui.showRoom&&b.room)?`<div class="m">חדר <span class="rm">${esc(b.room)}</span></div>`:""}
-        ${(!mid&&b.note)?`<div class="m">${esc(b.note)}</div>`:""}
-        ${(!mid&&st.ui.showTags&&groups.length)?`<div class="tags">${groups.map(g=>`<span class="tag">${esc(g)}</span>`).join("")}</div>`:""}
-        <div class="hnd bot"></div>
-      </div>`;
+      segs.forEach(([ss,se],i)=>{
+        const hh=(se-ss)*ppm, tiny=hh<38, mid=hh<64, first=i===0, last=i===segs.length-1;
+        const cls=["blk",cc,tiny?"tiny":"",bad.has(b.id)?"conflict":"",
+          segs.length>1?(first?"seg-first":last?"seg-last":"seg-mid"):"",
+          first?"":"cont"].filter(Boolean).join(" ");
+        h+=`<div class="${cls}" data-id="${b.id}" data-type="${b.type}" style="--h:${hueFor(b)}; ${place(ss,se)}">
+          ${first?`<div class="hnd top"></div>`:""}
+          <div class="t">${esc(b.title||"ללא שם")}${first?"":`<span class="cont-tag">המשך</span>`}</div>
+          ${tiny?"":`<div class="times">${first
+              ? `${m2s(bStart(b))}–${m2s(bEnd(b))}${st.ui.showDur?` <span class="sep">·</span> ${durTxt(bDur(b))}`:""}`
+              : `${m2s(ss)}–${m2s(se)}`}</div>`}
+          ${(first&&!mid&&st.ui.showTeacher&&b.teacher)?`<div class="m">${esc(b.teacher)}</div>`:""}
+          ${(first&&!mid&&st.ui.showRoom&&b.room)?`<div class="m">חדר <span class="rm">${esc(b.room)}</span></div>`:""}
+          ${(first&&!mid&&b.note)?`<div class="m">${esc(b.note)}</div>`:""}
+          ${(first&&!mid&&st.ui.showTags&&groups.length)?`<div class="tags">${groups.map(g=>`<span class="tag">${esc(g)}</span>`).join("")}</div>`:""}
+          ${last?`<div class="hnd bot"></div>`:""}
+        </div>`;
+      });
+      brks.forEach(([bs,be])=>{
+        const hh=(be-bs)*ppm;
+        h+=`<div class="brkblk${hh<26?" mini":""}" style="${place(bs,be)}">
+          ${hh>=13?`<span>הפסקה</span><span class="t">${m2s(bs)}–${m2s(be)}</span>`:""}
+        </div>`;
+      });
     });
     if(d===today&&st.ui.showNow){
       const now=new Date().getHours()*60+new Date().getMinutes();
@@ -1039,19 +1102,6 @@ function renderBoard(){
     }
     h+=`</div>`;
   });
-  if(st.ui.showBreaks){
-    const brs=breaksOf().filter(b=>s2m(b.end)>r0&&s2m(b.start)<r1);
-    if(brs.length){
-      h+=`<div class="breaks-layer" style="grid-row:2; grid-column:2 / -1; height:${total*ppm}px">`;
-      brs.forEach(b=>{
-        const bs=Math.max(s2m(b.start),r0), be=Math.min(s2m(b.end),r1), hh=(be-bs)*ppm;
-        h+=`<div class="brk" style="top:${(bs-r0)*ppm}px; height:${hh}px">
-          ${hh>=15?`<span>הפסקה<span class="t">${b.start}–${b.end}</span></span>`:""}
-        </div>`;
-      });
-      h+=`</div>`;
-    }
-  }
   h+=`</div></div>`;
   return h;
 }
@@ -1071,7 +1121,7 @@ function renderList(){
     if(!list.length)h+=`<div class="empty-note">אין שיעורים ביום זה</div>`;
     const gaps=st.ui.showGaps?gapsFor(list):[];
     list.forEach((b,i)=>{
-      h+=`<div class="lrow" data-id="${b.id}" style="--h:${hueFor(b)}">
+      h+=`<div class="lrow ${weightClass(b)}" data-id="${b.id}" style="--h:${hueFor(b)}">
         <div class="tm">${m2s(bStart(b))}–${m2s(bEnd(b))}</div>
         <div class="bar"></div>
         <div><div class="nm">${esc(b.title||"ללא שם")}</div>
@@ -1126,14 +1176,17 @@ function renderRail(){
     if(st.ui.colorMode==="teacher"){key=b.teacher||"ללא מרצה";label=key;}
     else if(st.ui.colorMode==="type"){key=b.type;label=TYPES[b.type]||b.type;}
     else if(st.ui.colorMode==="duration"){
-      const d=bDur(b); key=d<90?"a":d<150?"b":d<210?"c":d<270?"d":"e";
-      label={a:"עד שעה וחצי",b:"שעה וחצי עד שעתיים וחצי",c:"שעתיים וחצי עד 3.5 שעות",d:"3.5 עד 4.5 שעות",e:"מעל 4.5 שעות"}[key];
+      const wi=weightOf(bDur(b)); key="w"+wi; label=WEIGHT_LABELS[wi];
     } else {key=(b.title||"").trim();label=key||"ללא שם";}
-    const cur=buckets.get(key)||{label,h:hueFor(b),min:0,n:0};
+    const cur=buckets.get(key)||{label,h:hueFor(b),cls:weightClass(b),min:0,n:0};
     cur.min+=netDur(b); cur.n++; buckets.set(key,cur);
   });
-  $("#legend").innerHTML=[...buckets.values()].sort((a,b)=>b.min-a.min)
-    .map(v=>`<div class="lg"><span class="sw" style="--h:${v.h}"></span><span class="nm">${esc(v.label)}</span><span class="hr">${hoursTxt(v.min)}</span></div>`).join("")
+  const legendRows=[...buckets.values()];
+  legendRows.sort(st.ui.colorMode==="duration"
+    ? (a,b)=>(a.cls||"").localeCompare(b.cls||"")
+    : (a,b)=>b.min-a.min);
+  $("#legend").innerHTML=legendRows
+    .map(v=>`<div class="lg ${v.cls||""}"><span class="sw" style="--h:${v.h}"></span><span class="nm">${esc(v.label)}</span><span class="hr">${hoursTxt(v.min)}</span></div>`).join("")
     || `<div class="hint">אין שיעורים להצגה.</div>`;
 
   // stats
@@ -1173,6 +1226,7 @@ function renderChrome(){
   $("#tblName").textContent=t.name;
   const g=t.groups.find(x=>x.id===st.ui.filter);
   $("#tblMeta").textContent=(st.ui.filter==="all"?"כל הקבוצות":(g?g.name:st.ui.filter))+" · "+t.days.length+" ימי לימוד";
+  document.documentElement.setAttribute("data-color",st.ui.colorMode);
   $("#groupTabs").innerHTML=t.groups.map(g=>
     `<button data-g="${esc(g.id)}" aria-pressed="${st.ui.filter===g.id}">${esc(g.id)}</button>`).join("")
     +`<button data-g="all" aria-pressed="${st.ui.filter==="all"}">הכל</button>`;
@@ -1286,8 +1340,7 @@ window.addEventListener("pointermove",e=>{
 
 function markDragging(){
   if(!drag||drag.kind!=="block")return;
-  const el=document.querySelector(`.blk[data-id="${drag.id}"]`);
-  if(el)el.classList.add("dragging");
+  document.querySelectorAll(`.blk[data-id="${drag.id}"]`).forEach(el=>el.classList.add("dragging"));
 }
 function showTip(e,txt){
   let tip=$("#dragtip");
