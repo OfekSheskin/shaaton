@@ -339,6 +339,10 @@ select.pill,input.pill{
 .blk.tiny .t{font-size:11.5px}
 .blk.tiny .hnd{display:none}
 .blk.conflict{outline:2px solid var(--danger); outline-offset:-2px}
+/* touch-action:none is what let a finger drag a lecture while trying to scroll.
+   Locked is the default: the browser gets the gesture back. */
+[data-locked="1"] .blk{touch-action:auto; cursor:pointer}
+[data-locked="1"] .blk .hnd{display:none}
 .blk .hnd{position:absolute; inset-inline:0; height:7px; cursor:ns-resize; z-index:3}
 .blk .hnd.top{top:0} .blk .hnd.bot{bottom:0}
 .blk[data-type="break"]{
@@ -526,6 +530,7 @@ select.pill,input.pill{
     <div class="spacer"></div>
 
     <button class="btn primary" id="addBtn"><span class="ic">＋</span> <span class="hide-sm">שיעור</span> חדש</button>
+    <button class="btn" id="lockBtn"></button>
     <button class="btn hide-sm" id="undoBtn" title="בטל (Ctrl+Z)">בטל</button>
     <button class="btn hide-sm" id="redoBtn" title="בצע שוב (Ctrl+Shift+Z)">שחזר</button>
     <div class="sep" aria-hidden="true"></div>
@@ -612,6 +617,11 @@ select.pill,input.pill{
           <button class="btn" id="brkAdd" style="align-self:flex-start">＋ הפסקה</button>
         </div>
         <div class="field">
+          <label>שחזור</label>
+          <button class="btn" id="restoreBtn" style="align-self:flex-start">↺ שחזור מערכת המכללה</button>
+          <div class="hint">מחזיר את הטבלה הפעילה לנתונים הרשמיים של יד4, כולל ההפסקות.</div>
+        </div>
+        <div class="field">
           <label for="semEnd">סוף הסמסטר (לייצוא ליומן)</label>
           <input type="date" id="semEnd">
         </div>
@@ -663,6 +673,7 @@ select.pill,input.pill{
         <button class="btn" id="tblNew">＋ מערכת חדשה</button>
         <button class="btn" id="tblDup">שכפול</button>
         <button class="btn danger" id="tblDel">מחיקה</button>
+        <button class="btn" id="restoreBtn2">↺ שחזור מערכת המכללה</button>
       </div>
       <div class="field" style="margin-top:6px">
         <label>גיבוי ושחזור</label>
@@ -835,7 +846,7 @@ function collegeTable(){
 function freshState(){
   const t=collegeTable();
   return {v:1,seedVersion:SEED_VERSION,savedAt:Date.now(),activeId:t.id,tables:[t],
-    ui:{view:"board",colorMode:"duration",colorSet:true,filter:"A",ppm:1.15,
+    ui:{view:"board",colorMode:"duration",colorSet:true,filter:"A",ppm:1.15,locked:true,
         showTeacher:true,showRoom:true,showDur:true,showBreaks:true,showGaps:true,showNow:true,showTags:false}};
 }
 // Anyone already carrying the wrong v1/v2 data gets the corrected table added and
@@ -1227,6 +1238,11 @@ function renderChrome(){
   const g=t.groups.find(x=>x.id===st.ui.filter);
   $("#tblMeta").textContent=(st.ui.filter==="all"?"כל הקבוצות":(g?g.name:st.ui.filter))+" · "+t.days.length+" ימי לימוד";
   document.documentElement.setAttribute("data-color",st.ui.colorMode);
+  document.documentElement.setAttribute("data-locked",st.ui.locked?"1":"0");
+  $("#lockBtn").textContent=st.ui.locked?"🔒 נעול":"✏️ עריכה";
+  $("#lockBtn").title=st.ui.locked
+    ? "הלוח נעול — אי אפשר לגרור שיעורים בטעות. לחיצה על שיעור עדיין פותחת עריכה."
+    : "מצב עריכה — אפשר לגרור שיעורים ולשנות אורך בגרירת הקצה.";
   $("#groupTabs").innerHTML=t.groups.map(g=>
     `<button data-g="${esc(g.id)}" aria-pressed="${st.ui.filter===g.id}">${esc(g.id)}</button>`).join("")
     +`<button data-g="all" aria-pressed="${st.ui.filter==="all"}">הכל</button>`;
@@ -1305,10 +1321,11 @@ document.addEventListener("pointerdown",e=>{
   const [r0,r1]=range();
   if(blk){
     const b=findBlock(blk.dataset.id); if(!b)return;
+    if(st.ui.locked){ drag={kind:"tap",id:b.id,x0:e.clientX,y0:e.clientY,moved:false}; return; }
     const mode=e.target.classList.contains("hnd")?(e.target.classList.contains("top")?"top":"bot"):"move";
     drag={kind:"block",id:b.id,mode,x0:e.clientX,y0:e.clientY,orig:{day:b.day,start:b.start,end:b.end},moved:false,pushed:false,cols:colRects(),r0,r1};
     e.preventDefault();
-  }else{
+  }else if(!st.ui.locked){
     const rect=col.getBoundingClientRect();
     const y=e.clientY-rect.top;
     drag={kind:"create",day:+col.dataset.day,min:snap(r0+y/st.ui.ppm,15),x0:e.clientX,y0:e.clientY,moved:false,r0,r1};
@@ -1352,7 +1369,9 @@ function hideTip(){const t=$("#dragtip");if(t)t.remove();}
 window.addEventListener("pointerup",e=>{
   if(!drag)return;
   const d=drag; drag=null; hideTip();
-  if(d.kind==="block"){
+  if(d.kind==="tap"){
+    if(!d.moved){const b=findBlock(d.id); if(b)openEditor(b);}
+  }else if(d.kind==="block"){
     if(!d.moved){ openEditor(findBlock(d.id)); }
     else { save(); renderAll(); }
   }else if(d.kind==="create"&&!d.moved){
@@ -1424,6 +1443,23 @@ function on(sel,ev,fn){const e=$(sel); if(e)e.addEventListener(ev,fn);}
 on("#vBoard","click",()=>{st.ui.view="board";save();renderAll();});
 on("#vList","click",()=>{st.ui.view="list";save();renderAll();});
 on("#addBtn","click",()=>openEditor(null));
+on("#lockBtn","click",()=>{
+  st.ui.locked=!st.ui.locked; save(); renderAll();
+  toast(st.ui.locked?"הלוח נעול — אין גרירה בטעות":"מצב עריכה — אפשר לגרור");
+});
+function restoreOfficial(){
+  if(!confirm("לשחזר את הטבלה הזו לנתונים הרשמיים של יד4?\n\nכל שינוי שעשית בה יימחק. אפשר לבטל אחר כך עם Ctrl+Z."))return;
+  pushHistory();
+  const t=T(), fresh=collegeTable();
+  t.name=fresh.name; t.days=fresh.days; t.start=fresh.start; t.end=fresh.end;
+  t.groups=fresh.groups; t.breaks=fresh.breaks; t.blocks=fresh.blocks;
+  if(!t.groups.some(g=>g.id===t.myGroup))t.myGroup=fresh.myGroup;
+  st.ui.filter=t.myGroup;
+  $("#scrim2").hidden=true;
+  save(); renderAll(); toast("המערכת שוחזרה לנתוני המכללה");
+}
+on("#restoreBtn","click",restoreOfficial);
+on("#restoreBtn2","click",restoreOfficial);
 on("#printBtn","click",()=>window.print());
 const isNarrow=()=>window.matchMedia("(max-width:900px)").matches;
 function setRail(open){
